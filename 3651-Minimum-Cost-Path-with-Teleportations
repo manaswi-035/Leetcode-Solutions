@@ -1,0 +1,114 @@
+import java.util.*;
+
+class Solution {
+    static class FenwickMin {
+        long[] bit;
+        int n;
+        static final long INF = (long) 4e18;
+
+        FenwickMin(int n) {
+            this.n = n;
+            bit = new long[n + 2];
+            Arrays.fill(bit, INF);
+        }
+
+        void update(int i, long val) {
+            while (i <= n) {
+                bit[i] = Math.min(bit[i], val);
+                i += i & -i;
+            }
+        }
+
+        long query(int i) {
+            long res = INF;
+            while (i > 0) {
+                res = Math.min(res, bit[i]);
+                i -= i & -i;
+            }
+            return res;
+        }
+    }
+
+    public int minCost(int[][] grid, int k) {
+        int m = grid.length, n = grid[0].length;
+        int total = m * n;
+
+        int[] vals = new int[total];
+        int idx = 0;
+        for (int[] row : grid) for (int v : row) vals[idx++] = v;
+        Arrays.sort(vals);
+
+        int[] uniq = new int[total];
+        int u = 0;
+        uniq[u++] = vals[0];
+        for (int i = 1; i < total; i++) if (vals[i] != vals[i - 1]) uniq[u++] = vals[i];
+        uniq = Arrays.copyOf(uniq, u);
+
+        long INF = (long) 4e18;
+
+        long[][] prev = new long[m][n];
+        long[][] cur = new long[m][n];
+
+        for (int i = 0; i < m; i++) Arrays.fill(prev[i], INF);
+        prev[0][0] = 0;
+
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < n; j++) {
+                if (i == 0 && j == 0) continue;
+                long best = INF;
+                if (i > 0) best = Math.min(best, prev[i - 1][j]);
+                if (j > 0) best = Math.min(best, prev[i][j - 1]);
+                prev[i][j] = best + grid[i][j];
+            }
+        }
+
+        for (int t = 1; t <= k; t++) {
+            for (int i = 0; i < m; i++) Arrays.fill(cur[i], INF);
+
+            FenwickMin fenwick = new FenwickMin(uniq.length);
+            for (int i = 0; i < m; i++) {
+                for (int j = 0; j < n; j++) {
+                    int v = grid[i][j];
+                    int orig = lowerBound(uniq, v);
+                    int revPos = (uniq.length - orig);
+                    fenwick.update(revPos, prev[i][j]);
+                }
+            }
+
+            for (int i = 0; i < m; i++) {
+                for (int j = 0; j < n; j++) {
+                    long teleportBest = fenwick.query(uniq.length - lowerBound(uniq, grid[i][j]));
+                    long viaTeleport = teleportBest;
+
+                    long viaNormal = INF;
+                    if (i == 0 && j == 0) {
+                        viaNormal = 0;
+                    } else {
+                        long bestPrev = INF;
+                        if (i > 0) bestPrev = Math.min(bestPrev, cur[i - 1][j]);
+                        if (j > 0) bestPrev = Math.min(bestPrev, cur[i][j - 1]);
+                        if (bestPrev < INF) viaNormal = bestPrev + grid[i][j];
+                    }
+
+                    cur[i][j] = Math.min(viaNormal, viaTeleport);
+                }
+            }
+
+            long[][] tmp = prev;
+            prev = cur;
+            cur = tmp;
+        }
+
+        return (int) prev[m - 1][n - 1];
+    }
+
+    private int lowerBound(int[] a, int x) {
+        int l = 0, r = a.length;
+        while (l < r) {
+            int mid = (l + r) >>> 1;
+            if (a[mid] >= x) r = mid;
+            else l = mid + 1;
+        }
+        return l;
+    }
+}
