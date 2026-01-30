@@ -1,0 +1,105 @@
+import java.util.*;
+
+class Solution {
+    static final long INF = (long) 4e18;
+
+    public long minimumCost(String source, String target,
+                            String[] original, String[] changed, int[] cost) {
+
+        int n = source.length();
+        int m = original.length;
+
+        HashMap<Integer, HashMap<String, Integer>> idMap = new HashMap<>();
+        HashMap<Integer, ArrayList<String>> listMap = new HashMap<>();
+
+        for (int i = 0; i < m; i++) {
+            int len = original[i].length();
+            if (len != changed[i].length()) continue;
+
+            idMap.putIfAbsent(len, new HashMap<>());
+            listMap.putIfAbsent(len, new ArrayList<>());
+
+            HashMap<String, Integer> id = idMap.get(len);
+            ArrayList<String> list = listMap.get(len);
+
+            if (!id.containsKey(original[i])) {
+                id.put(original[i], list.size());
+                list.add(original[i]);
+            }
+            if (!id.containsKey(changed[i])) {
+                id.put(changed[i], list.size());
+                list.add(changed[i]);
+            }
+        }
+
+        HashMap<Integer, long[][]> distMap = new HashMap<>();
+
+        for (int len : listMap.keySet()) {
+            int sz = listMap.get(len).size();
+            long[][] dist = new long[sz][sz];
+            for (int i = 0; i < sz; i++) {
+                Arrays.fill(dist[i], INF);
+                dist[i][i] = 0;
+            }
+            distMap.put(len, dist);
+        }
+
+        for (int i = 0; i < m; i++) {
+            int len = original[i].length();
+            if (len != changed[i].length()) continue;
+
+            HashMap<String, Integer> id = idMap.get(len);
+            long[][] dist = distMap.get(len);
+
+            int u = id.get(original[i]);
+            int v = id.get(changed[i]);
+            dist[u][v] = Math.min(dist[u][v], cost[i]);
+        }
+
+        for (int len : distMap.keySet()) {
+            long[][] dist = distMap.get(len);
+            int sz = dist.length;
+
+            for (int k = 0; k < sz; k++) {
+                for (int i = 0; i < sz; i++) {
+                    if (dist[i][k] == INF) continue;
+                    for (int j = 0; j < sz; j++) {
+                        if (dist[k][j] == INF) continue;
+                        dist[i][j] = Math.min(dist[i][j], dist[i][k] + dist[k][j]);
+                    }
+                }
+            }
+        }
+
+        long[] dp = new long[n + 1];
+        Arrays.fill(dp, INF);
+        dp[0] = 0;
+
+        for (int i = 0; i < n; i++) {
+            if (dp[i] == INF) continue;
+
+            if (source.charAt(i) == target.charAt(i)) {
+                dp[i + 1] = Math.min(dp[i + 1], dp[i]);
+            }
+
+            for (int len : distMap.keySet()) {
+                if (i + len > n) continue;
+
+                String subS = source.substring(i, i + len);
+                String subT = target.substring(i, i + len);
+
+                HashMap<String, Integer> id = idMap.get(len);
+                Integer a = id.get(subS);
+                Integer b = id.get(subT);
+                if (a == null || b == null) continue;
+
+                long cst = distMap.get(len)[a][b];
+                if (cst == INF) continue;
+
+                dp[i + len] = Math.min(dp[i + len], dp[i] + cst);
+            }
+        }
+
+        return dp[n] >= INF / 2 ? -1 : dp[n];
+    }
+}
