@@ -1,0 +1,55 @@
+class Solution {
+    public long maxSumTrionic(int[] nums) {
+        int n = nums.length;
+        long NEG = Long.MIN_VALUE / 4;
+
+        long[] inc1 = new long[n];   // increasing ending at i (len >= 2)
+        long[] dec = new long[n];    // inc(len>=2) then dec(len>=2), ending at i
+        long[] inc2 = new long[n];   // inc(len>=2) then dec(len>=2) then inc(len>=2), ending at i
+
+        for (int i = 0; i < n; i++) {
+            inc1[i] = dec[i] = inc2[i] = NEG;
+        }
+
+        // inc1: strictly increasing with length >= 2
+        long prev = nums[0];
+        for (int i = 1; i < n; i++) {
+            if (nums[i - 1] < nums[i]) {
+                inc1[i] = Math.max((long) nums[i - 1] + nums[i], prev + nums[i]);
+                prev = Math.max((long) nums[i - 1] + nums[i], prev + nums[i]);
+            } else {
+                prev = nums[i];
+            }
+        }
+
+        // dec: start from inc1, then strictly decreasing length >= 2
+        long prevDec = NEG;
+        for (int i = 1; i < n; i++) {
+            if (nums[i - 1] > nums[i]) {
+                long startDec = inc1[i - 1] + nums[i]; // first decrease step makes dec len >=2
+                long extendDec = prevDec + nums[i];
+                prevDec = Math.max(startDec, extendDec);
+                dec[i] = prevDec;
+            } else {
+                prevDec = NEG;
+            }
+        }
+
+        // inc2: start from dec, then strictly increasing length >= 2
+        long prevInc2 = NEG;
+        for (int i = 1; i < n; i++) {
+            if (nums[i - 1] < nums[i]) {
+                long startInc2 = dec[i - 1] + nums[i]; // first increase step makes last inc len >=2
+                long extendInc2 = prevInc2 + nums[i];
+                prevInc2 = Math.max(startInc2, extendInc2);
+                inc2[i] = prevInc2;
+            } else {
+                prevInc2 = NEG;
+            }
+        }
+
+        long ans = NEG;
+        for (int i = 0; i < n; i++) ans = Math.max(ans, inc2[i]);
+        return ans;
+    }
+}
